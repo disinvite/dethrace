@@ -2716,7 +2716,23 @@ void MungeSplash(tU32 pTime) {
     if (gNum_splash_types == 0) {
         return;
     }
-    if (!gAction_replay_mode || GetReplayRate() == 0.0) {
+    if (gAction_replay_mode && GetReplayRate() != 0.0f) {
+        for (type = eVehicle_net_player; type <= eVehicle_rozzer; type++) {
+            for (i = 0; i < (type == eVehicle_self ? 1 : GetCarCount(type)); i++) {
+                if (type == eVehicle_self) {
+                    car = &gProgram_state.current_car;
+                } else {
+                    car = GetCarSpec(type, i);
+                }
+                if (car->water_d != 10000.0f && car->driver != eDriver_local_human) {
+                    CreateSplash(car, pTime);
+                }
+            }
+        }
+        if (gProgram_state.current_car.water_d != 10000.0f) {
+            CreateSplash(&gProgram_state.current_car, 100);
+        }
+    } else {
         if (!gAction_replay_mode) {
             for (i = 0; i < gNum_cars_and_non_cars; i++) {
 #if defined(DETHRACE_FIX_BUGS)
@@ -2726,61 +2742,44 @@ void MungeSplash(tU32 pTime) {
                     continue;
                 }
 #endif
-                if (gActive_car_list[i]->water_d != 10000.0 && gActive_car_list[i]->driver != eDriver_local_human) {
+                if (gActive_car_list[i]->water_d != 10000.0f && gActive_car_list[i]->driver != eDriver_local_human) {
                     CreateSplash(gActive_car_list[i], pTime);
                 }
             }
-            if (gProgram_state.current_car.water_d != 10000.0) {
+            if (gProgram_state.current_car.water_d != 10000.0f) {
                 CreateSplash(&gProgram_state.current_car, 100);
             }
-        }
-    } else {
-        for (type = eVehicle_net_player; type <= eVehicle_rozzer; type++) {
-            for (i = 0;; i++) {
-                if (i >= type ? GetCarCount(type) : 1) {
-                    break;
-                }
-                if (type) {
-                    car = GetCarSpec(type, i);
-                } else {
-                    car = &gProgram_state.current_car;
-                }
-                if (car->water_d != 10000.0 && car->driver != eDriver_local_human) {
-                    CreateSplash(car, pTime);
-                }
-            }
-        }
-        if (gProgram_state.current_car.water_d != 10000.0) {
-            CreateSplash(&gProgram_state.current_car, 100);
         }
     }
     if (!gSplash_flags) {
         return;
     }
+
+    dt = pTime * 0.001f;
+
     for (i = 0; i < COUNT_OF(gSplash); i++) {
         if (!TESTBIT(gSplash_flags, i)) {
             continue;
         }
-        if (gSplash[i].just_done || (gAction_replay_mode && GetReplayRate() == 0.0f)) {
-            dt = gSplash[i].size * gSplash[i].scale_x;
-            gSplash[i].actor->t.t.mat.m[0][0] = gCamera_to_world.m[0][0] * dt;
-            gSplash[i].actor->t.t.mat.m[0][1] = gCamera_to_world.m[0][1] * dt;
-            gSplash[i].actor->t.t.mat.m[0][2] = gCamera_to_world.m[0][2] * dt;
-            gSplash[i].actor->t.t.mat.m[1][0] = gSplash[i].size * gCamera_to_world.m[1][0];
-            gSplash[i].actor->t.t.mat.m[1][1] = gSplash[i].size * gCamera_to_world.m[1][1];
-            gSplash[i].actor->t.t.mat.m[1][2] = gSplash[i].size * gCamera_to_world.m[1][2];
-            gSplash[i].actor->t.t.mat.m[2][0] = gSplash[i].size * gCamera_to_world.m[2][0];
-            gSplash[i].actor->t.t.mat.m[2][1] = gSplash[i].size * gCamera_to_world.m[2][1];
-            gSplash[i].actor->t.t.mat.m[2][2] = gSplash[i].size * gCamera_to_world.m[2][2];
-            if (gProgram_state.cockpit_on) {
-                ts = sqrt(gCamera_to_world.m[0][2] * gCamera_to_world.m[0][2] + gCamera_to_world.m[0][0] * gCamera_to_world.m[0][0]);
-                DRMatrix34PreRotateZ(&gSplash[i].actor->t.t.mat, -FastScalarArcTan2Angle(gCamera_to_world.m[0][1], ts));
-            }
-            gSplash[i].just_done = 0;
-        } else {
+        if (!gSplash[i].just_done && (!gAction_replay_mode || GetReplayRate() != 0.0f)) {
             CLEARBIT(gSplash_flags, i);
             BrActorRemove(gSplash[i].actor);
+            continue;
         }
+        ts = gSplash[i].size * gSplash[i].scale_x;
+        gSplash[i].actor->t.t.mat.m[0][0] = gCamera_to_world.m[0][0] * ts;
+        gSplash[i].actor->t.t.mat.m[0][1] = gCamera_to_world.m[0][1] * ts;
+        gSplash[i].actor->t.t.mat.m[0][2] = gCamera_to_world.m[0][2] * ts;
+        gSplash[i].actor->t.t.mat.m[1][0] = gSplash[i].size * gCamera_to_world.m[1][0];
+        gSplash[i].actor->t.t.mat.m[1][1] = gSplash[i].size * gCamera_to_world.m[1][1];
+        gSplash[i].actor->t.t.mat.m[1][2] = gSplash[i].size * gCamera_to_world.m[1][2];
+        gSplash[i].actor->t.t.mat.m[2][0] = gSplash[i].size * gCamera_to_world.m[2][0];
+        gSplash[i].actor->t.t.mat.m[2][1] = gSplash[i].size * gCamera_to_world.m[2][1];
+        gSplash[i].actor->t.t.mat.m[2][2] = gSplash[i].size * gCamera_to_world.m[2][2];
+        if (gProgram_state.cockpit_on) {
+            DRMatrix34PreRotateZ(&gSplash[i].actor->t.t.mat, -FastScalarArcTan2Angle(gCamera_to_world.m[0][1], sqrt(gCamera_to_world.m[0][2] * gCamera_to_world.m[0][2] + gCamera_to_world.m[0][0] * gCamera_to_world.m[0][0])));
+        }
+        gSplash[i].just_done = 0;
     }
 }
 
