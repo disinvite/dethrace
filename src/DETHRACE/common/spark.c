@@ -2868,17 +2868,20 @@ void DisposeKevStuffCar(tCar_spec* pCar) {
         }
     }
     for (i = 0; i < COUNT_OF(gSparks); i++) {
-        if (TESTBIT(gSpark_flags, i) && gSparks[i].car == pCar) {
+        if (!TESTBIT(gSpark_flags, i)) {
+            continue;
+        }
+        if (gSparks[i].car == pCar) {
             gSparks[i].count = 0;
             CLEARBIT(gSpark_flags, i);
         }
-        if (gCar_to_view == pCar) {
-            gCamera_yaw = 0;
-            gCar_to_view = &gProgram_state.current_car;
-            InitialiseExternalCamera();
-            PositionExternalCamera(gCar_to_view, 200);
-            gCar_to_view = &gProgram_state.current_car;
-        }
+    }
+    if (gCar_to_view == pCar) {
+        gCamera_yaw = 0;
+        gCar_to_view = &gProgram_state.current_car;
+        InitialiseExternalCamera();
+        PositionExternalCamera(gCar_to_view, 200);
+        gCar_to_view = &gProgram_state.current_car;
     }
 }
 
